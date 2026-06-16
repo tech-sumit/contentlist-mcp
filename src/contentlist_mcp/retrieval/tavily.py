@@ -42,12 +42,10 @@ async def search(query: str, vertical: str, freshness: str, limit: int) -> list[
         "days": _DAYS.get(freshness, 7),
         "include_answer": False,
     }
-    try:
-        resp = await client().post("https://api.tavily.com/search", json=payload)
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception:
-        return []
+    # Transport/HTTP errors propagate so the pipeline's circuit breaker can trip.
+    resp = await client().post("https://api.tavily.com/search", json=payload)
+    resp.raise_for_status()
+    data = resp.json()
 
     out: list[Candidate] = []
     for r in data.get("results", []):

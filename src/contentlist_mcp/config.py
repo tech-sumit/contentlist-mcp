@@ -15,6 +15,13 @@ def _csv(name: str, default: str = "") -> list[str]:
     return [s.strip() for s in raw.split(",") if s.strip()]
 
 
+def _bool(name: str, default: bool) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in ("1", "true", "yes", "on")
+
+
 @dataclass
 class Config:
     # --- Retrieval backends -------------------------------------------------
@@ -22,6 +29,9 @@ class Config:
     searxng_url: str = field(default_factory=lambda: os.environ.get("SEARXNG_URL", "").rstrip("/"))
     # Tavily free-tier API key (1,000 credits/mo, no card). Empty => disabled.
     tavily_api_key: str = field(default_factory=lambda: os.environ.get("TAVILY_API_KEY", ""))
+    # Music APIs (iTunes RSS / ListenBrainz / MusicBrainz) — all keyless & free.
+    # Locale for iTunes RSS charts ("us", "gb", …) and MusicBrainz/ListenBrainz lookups.
+    music_storefront: str = field(default_factory=lambda: os.environ.get("MUSIC_STOREFRONT", "us"))
 
     # --- Networking ---------------------------------------------------------
     user_agent: str = field(
@@ -41,6 +51,36 @@ class Config:
     # --- Behaviour ----------------------------------------------------------
     max_limit: int = field(default_factory=lambda: int(os.environ.get("MAX_LIMIT", "25")))
     blocked_domains: list[str] = field(default_factory=lambda: _csv("BLOCKED_DOMAINS"))
+
+    # --- Summaries: optional LLM pass (Claude Haiku) ------------------------
+    # Stays free/extractive by default; set both the flag and a key to enable.
+    enable_llm_summaries: bool = field(
+        default_factory=lambda: _bool("ENABLE_LLM_SUMMARIES", False)
+    )
+    anthropic_api_key: str = field(default_factory=lambda: os.environ.get("ANTHROPIC_API_KEY", ""))
+    # Latest Claude Haiku — cheap, fast 1-liners + "why it matters".
+    llm_summary_model: str = field(
+        default_factory=lambda: os.environ.get("LLM_SUMMARY_MODEL", "claude-haiku-4-5")
+    )
+
+    # --- Enrichment: fetch_page when a feed/search summary is thin ----------
+    enable_enrichment: bool = field(default_factory=lambda: _bool("ENABLE_ENRICHMENT", True))
+    enrichment_min_chars: int = field(
+        default_factory=lambda: int(os.environ.get("ENRICHMENT_MIN_CHARS", "140"))
+    )
+    enrichment_max_items: int = field(
+        default_factory=lambda: int(os.environ.get("ENRICHMENT_MAX_ITEMS", "5"))
+    )
+
+    # --- Per-client rate limiting + backend circuit breakers ---------------
+    rate_limit_rpm: int = field(default_factory=lambda: int(os.environ.get("RATE_LIMIT_RPM", "60")))
+    rate_limit_burst: int = field(default_factory=lambda: int(os.environ.get("RATE_LIMIT_BURST", "20")))
+    breaker_fail_threshold: int = field(
+        default_factory=lambda: int(os.environ.get("BREAKER_FAIL_THRESHOLD", "3"))
+    )
+    breaker_reset_seconds: float = field(
+        default_factory=lambda: float(os.environ.get("BREAKER_RESET_SECONDS", "30"))
+    )
 
     # --- MCP transport ------------------------------------------------------
     # "streamable-http" (default, hosted) or "stdio" (local dev with an MCP client).

@@ -17,6 +17,8 @@ class Vertical:
     default_freshness: str = "day"
     # Whether to also hit web search (SearXNG/Tavily) for breadth.
     use_web_search: bool = False
+    # Whether to consult the keyless music APIs (iTunes RSS / ListenBrainz / MusicBrainz).
+    use_music_apis: bool = False
     # Ranking weights: freshness, source authority/diversity, relevance.
     w_fresh: float = 0.5
     w_auth: float = 0.3
@@ -50,6 +52,7 @@ VERTICALS: dict[str, Vertical] = {
         ],
         default_freshness="week",
         use_web_search=True,
+        use_music_apis=True,
         w_fresh=0.50, w_auth=0.25, w_rel=0.25,
         keywords=("song", "songs", "music", "album", "albums", "track", "tracks", "artist", "release"),
     ),

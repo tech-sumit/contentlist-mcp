@@ -19,6 +19,7 @@ _AUTHORITY: dict[str, float] = {
     "npr.org": 0.9, "theguardian.com": 0.9, "apnews.com": 0.95, "reuters.com": 0.95,
     "bbc.com": 0.9, "arstechnica.com": 0.85, "theverge.com": 0.8,
     "news.ycombinator.com": 0.7, "pitchfork.com": 0.85, "billboard.com": 0.85,
+    "music.apple.com": 0.8, "musicbrainz.org": 0.75,
 }
 
 _TOKEN = re.compile(r"[a-z0-9]+")

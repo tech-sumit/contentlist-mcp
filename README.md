@@ -17,9 +17,14 @@ burning tokens.
 ```
 Agent ──search_content("top news today")──▶  contentlist-mcp
                                               ├─ RSS / vertical feeds   (free, clean, fresh)
+                                              ├─ Music APIs             (iTunes RSS · ListenBrainz · MusicBrainz)
                                               ├─ SearXNG (self-hosted)  (free, broad web)
                                               └─ Tavily free tier        (managed fallback)
               ◀── ranked, deduped, cited list ──┘  (cached for instant warm hits)
+
+Each web/API backend sits behind a circuit breaker (a throttled source trips open and
+the next layer takes over), and callers are rate-limited per client — the agent is never
+hard-failed. Thin items are optionally enriched with fetched page text.
 ```
 
 **"Free like Google":** the default backends are **truly free** — self-hosted SearXNG
@@ -36,7 +41,19 @@ upgrade behind the same contract — no change to the agent integration.
 | `list_verticals()` | Supported verticals + default freshness windows. |
 
 Verticals: `news`, `music`, `web` — or `auto` (routed from the query's keywords).
+The `music` vertical adds keyless iTunes RSS charts, ListenBrainz fresh releases, and
+MusicBrainz on top of music news feeds.
 Freshness: `day`, `week`, `month`, `any` (or `auto` per vertical).
+
+### Optional: nicer summaries with Claude Haiku
+Summaries are extractive (free, zero-key) by default. To enable a batched Claude Haiku
+pass for nicer 1-liners + a "why it matters" hook, install the extra and flip the flag:
+```bash
+pip install -e ".[llm]"
+ENABLE_LLM_SUMMARIES=true ANTHROPIC_API_KEY=sk-... contentlist-mcp
+```
+It uses the latest Claude Haiku and degrades silently to extractive on any error, so the
+"free by default" guarantee holds.
 
 ## Quickstart
 
@@ -74,6 +91,12 @@ All optional — see [`.env.example`](.env.example). Key ones:
 |-----|---------|---------|
 | `SEARXNG_URL` | _(empty)_ | Self-hosted SearXNG base URL; empty = RSS-only |
 | `TAVILY_API_KEY` | _(empty)_ | Enables the managed fallback (free tier) |
+| `ENABLE_LLM_SUMMARIES` | `false` | Turn on the Claude Haiku summary pass (needs `ANTHROPIC_API_KEY` + the `llm` extra) |
+| `ANTHROPIC_API_KEY` | _(empty)_ | API key for the optional Haiku summaries |
+| `ENABLE_ENRICHMENT` | `true` | Fetch + extract page text for the top items with thin summaries |
+| `RATE_LIMIT_RPM` | `60` | Per-client request rate (token bucket; `RATE_LIMIT_BURST=20`) |
+| `BREAKER_FAIL_THRESHOLD` | `3` | Failures before a backend's circuit breaker trips (`BREAKER_RESET_SECONDS=30`) |
+| `MUSIC_STOREFRONT` | `us` | Locale for iTunes charts / music lookups |
 | `MCP_TRANSPORT` | `streamable-http` | `streamable-http` (hosted) or `stdio` (local) |
 | `CACHE_TTL_DAY` | `300` | Warm-cache TTL (s) for daily-fresh queries |
 | `MAX_LIMIT` | `25` | Hard cap on items per request |
@@ -93,15 +116,18 @@ src/contentlist_mcp/
   server.py        # MCP tools (search_content, fetch_page, list_verticals)
   pipeline.py      # retrieve → dedupe → rank → summarize orchestration
   verticals.py     # per-vertical feeds + ranking weights
-  retrieval/       # rss · searxng · tavily backends (pluggable)
+  retrieval/       # rss · music · searxng · tavily backends (pluggable)
+  reliability.py   # per-client rate limiter + per-backend circuit breakers
   dedupe.py rank.py extract.py summarize.py cache.py config.py models.py
 docs/design.md     # architecture, backend comparison, roadmap
 docker-compose.yml # SearXNG + server
 ```
 
 ## Status
-Phase-0 MVP: `news` + `music` (RSS) and generic `web` (SearXNG/Tavily), extractive
-summaries, in-memory cache, prompt-injection-aware. Roadmap in `docs/design.md` §12.
+Phase 1: `news` + `music` (RSS **plus** iTunes/ListenBrainz/MusicBrainz) and generic
+`web` (SearXNG/Tavily), extractive summaries with an optional Claude Haiku pass,
+thin-item `fetch_page` enrichment, per-client rate limiting + backend circuit breakers,
+in-memory cache, prompt-injection-aware. Roadmap in `docs/design.md` §12.
 
 ## Security
 Scraped content is untrusted input to an LLM — it's returned as **data, never

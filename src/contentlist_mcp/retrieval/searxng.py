@@ -44,12 +44,10 @@ async def search(query: str, freshness: str, limit: int, lang: str = "en") -> li
     if tr:
         params["time_range"] = tr
 
-    try:
-        resp = await client().get(f"{CONFIG.searxng_url}/search", params=params)
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception:
-        return []
+    # Transport/HTTP errors propagate so the pipeline's circuit breaker can trip.
+    resp = await client().get(f"{CONFIG.searxng_url}/search", params=params)
+    resp.raise_for_status()
+    data = resp.json()
 
     out: list[Candidate] = []
     for r in data.get("results", [])[: limit * 3]:

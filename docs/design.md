@@ -279,8 +279,11 @@ Mirror what this repo already does for BatonDeck:
 - Extraction (Trafilatura), URL-canonical dedupe, recency+diversity ranking, extractive summaries.
 - In-memory/Redis cache. Streamable-HTTP MCP server. No LLM dependency.
 
-**Phase 1:** music vertical (iTunes RSS / ListenBrainz / MusicBrainz), Tavily fallback, thumbnails,
-`fetch_page`, optional Haiku summaries, basic auth/rate-limit.
+**Phase 1 — ✅ done:** music vertical (iTunes RSS / ListenBrainz / MusicBrainz) on top of
+music news feeds; Tavily fallback + thumbnails (Phase 0); `fetch_page` enrichment for thin
+feed/search summaries; optional Claude Haiku summaries + "why it matters" (config-flagged,
+extractive/free by default — latest Haiku model); per-client rate limiting + per-backend
+circuit breakers (SearXNG throttled → Tavily). Still runs with zero API keys (RSS-only).
 
 **Phase 2:** more verticals (products/reviews, trends), embedding-based clustering, ranking tuning,
 pre-warming cron, dashboards, paid-backend upgrade path, the marketplace plugin.
